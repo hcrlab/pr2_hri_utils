@@ -1,0 +1,9 @@
+# horizontal: a float in range [0, 1]
+# vertical: a float in range [0, 1]
+# (0, 0) points to bottom left corner, (1, 1) points to top right corner
+# (-1, -1) puts the arm back to neutral (non-pointing) position
+
+float64 horizontal
+float64 vertical
+---
+bool success

@@ -1,0 +1,9 @@
+<launch>
+
+  <!-- Just the one node. -->
+  <!-- Add the following line to your launch file. -->
+  <!-- <include file="$(find pr2_point)/pr2_point_service.launch" /> -->
+
+  <node name="recognizer" pkg="pr2_point" type="point_service_node.py" output="screen"> </node>
+
+</launch>
