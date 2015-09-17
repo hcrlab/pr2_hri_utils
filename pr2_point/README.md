@@ -47,7 +47,7 @@ Then follow the instructions. The robot's arms should get relaxed if you slightl
 
 ## Using two arms simultaneously
 
-To calibrate point with both arms, specify ```arm_index:=2```. If you are calibrating, this will go through the right arm calibration first and then the left arm calibration. During normal operation, you will have two separate services for each arm ```/pr2_point_service/arm0``` and ```/pr2_point_service/arm1```. So just create __two separate service proxies__ with these service names and call the one you would like to point with.
+To point with both arms, specify ```arm_index:=2```. If you are calibrating, this will go through the right arm calibration first and then the left arm calibration. During normal operation, you will have two separate services for each arm ```/pr2_point_service/arm0``` and ```/pr2_point_service/arm1```. So just create __two separate service proxies__ with these service names and call the one you would like to point with.
 
 
 
