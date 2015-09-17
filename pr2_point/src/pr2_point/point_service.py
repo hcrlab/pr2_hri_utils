@@ -157,13 +157,13 @@ class PointService:
 
 	def save_pose(self, pose, name):
 		rospack = rospkg.RosPack()
-		pose_file_name = str(rospack.get_path('pr2_point')) + '/data/' + name + '.json' 
+		pose_file_name = str(rospack.get_path('pr2_point')) + '/data/arm' + str(self.arm_index) + '_' + name + '.json' 
 		with open(pose_file_name, 'w') as pose_file:
 			json.dump(pose, pose_file)
 
 	def load_pose(self, name):
 		rospack = rospkg.RosPack()
-		pose_file_name = str(rospack.get_path('pr2_point')) + '/data/' + name + '.json' 
+		pose_file_name = str(rospack.get_path('pr2_point')) + '/data/arm' + str(self.arm_index) + '_' + name + '.json' 
 		with open(pose_file_name) as pose_file:
 			pose = json.load(pose_file)
 		return pose
