@@ -45,7 +45,9 @@ $ roslaunch pr2_point pr2_point_service.launch is_calibration:=true
 
 Then follow the instructions. The robot's arms should get relaxed if you slightly push them and they should freeze back is you keep them constant at some pose for a few seconds. You will specify four different poses (neutral, bottom left, top left, top right, bottom right) by posing the robot's arm and pressing enter on the terminal. 
 
+## Using two arms simultaneously
 
+To point with both arms, specify ```arm_index:=2```. If you are calibrating, this will go through the right arm calibration first and then the left arm calibration. During normal operation, you will have two separate services for each arm ```/pr2_point_service/arm0``` and ```/pr2_point_service/arm1```. So just create __two separate service proxies__ with these service names and call the one you would like to point with.
 
 
 
