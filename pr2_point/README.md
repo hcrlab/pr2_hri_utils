@@ -30,6 +30,8 @@ The service has thee parameters:
 * ```horizontal``` is a float between 0 and 1 that specifies the horizontal pose of the pointing gesture
 * ```duration``` (in seconds) is the time spent at the pointing pose before returning to a neutral pose
 
+(0,0) is the bottom left corner, (0,1) is the top left corner, and so on. 
+
 For an example of how to call the service from your code, see scripts/test.py
 
 ## Calibration
