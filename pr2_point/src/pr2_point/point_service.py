@@ -28,7 +28,7 @@ DURATION_MIN_THRESHOLD = 0.5  # seconds
 class PointService:
 	''' Interfacing with one arm for controlling mode and action execution'''
 
-	_is_autorelease_on = False
+	_is_autorelease_on = True
 
 	def __init__(self, arm_index):
 		
