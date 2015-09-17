@@ -18,5 +18,6 @@ if __name__ == '__main__':
         point_srv(1, 1, 1.0)
         point_srv(0, 1, 1.0)
         point_srv(-1, -1, 1.0)
+        
     except rospy.ServiceException:
         rospy.logerr('PR2 point service call failed.')

@@ -4,6 +4,12 @@
   <!-- Add the following line to your launch file. -->
   <!-- <include file="$(find pr2_point)/pr2_point_service.launch" /> -->
 
-  <node name="recognizer" pkg="pr2_point" type="point_service_node.py" output="screen"> </node>
+  <arg name="arm_index" default="1" />
+  <arg name="is_calibration" default="false" />
+
+  <node name="point_service_node" pkg="pr2_point" type="point_service_node.py" output="screen">
+		<param name="arm_index" value="$(arg arm_index)" />
+		<param name="is_calibration" value="$(arg is_calibration)" />
+  </node>
 
 </launch>
