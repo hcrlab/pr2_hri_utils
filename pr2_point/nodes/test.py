@@ -12,11 +12,11 @@ if __name__ == '__main__':
     rospy.loginfo('Got response from the PR2 pointing service...')
     
     try:
-        point_srv(0.5, 0.5)
-        point_srv(0, 0)
-        point_srv(0, 1)
-        point_srv(1, 1)
-        point_srv(0, 1)
-        point_srv(-1, -1)
+        point_srv(0.5, 0.5, 1.0)
+        point_srv(0, 0, 1.0)
+        point_srv(0, 1, 1.0)
+        point_srv(1, 1, 1.0)
+        point_srv(0, 1, 1.0)
+        point_srv(-1, -1, 1.0)
     except rospy.ServiceException:
         rospy.logerr('PR2 point service call failed.')

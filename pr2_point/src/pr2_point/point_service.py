@@ -33,7 +33,6 @@ class PointService:
         self.tf_listener = TransformListener()
 
         self.arm_mode = ArmMode.HOLD
-        self.gripper_state = None
 
         self.gripper_joint_name = self._side_prefix() + '_gripper_joint'
         self.ee_name = self._side_prefix() + '_wrist_roll_link'
@@ -52,6 +51,7 @@ class PointService:
         self.movement_buffer_size = 40
         self.last_unstable_time = rospy.Time.now()
         self.arm_movement = []
+        self.is_calibrating = False
 
         self.lock = threading.Lock()
         rospy.Subscriber('joint_states', JointState, self.joint_states_cb)
@@ -72,13 +72,6 @@ class PointService:
         rospy.loginfo('Got response form trajectory action server for '
                       + self.side() + ' arm.')
 
-        # Set up Inversse Kinematics
-        self.ik_srv = None
-        self.ik_request = None
-        self.ik_joints = None
-        self.ik_limits = None
-        self._setup_ik()
-
         gripper_name = (self._side_prefix() +
                         '_gripper_controller/gripper_action')
         self.gripper_client = SimpleActionClient(gripper_name,
@@ -86,31 +79,96 @@ class PointService:
         self.gripper_client.wait_for_server()
         rospy.loginfo('Got response form gripper server for '
                       + self.side() + ' arm.')
-        self.check_gripper_state()
+        self.close_gripper()
 
-    def _setup_ik(self):
-        '''Sets up services for inverse kinematics'''
-        ik_srv_name = '/compute_ik'
-        rospy.loginfo('IK info service has responded for '
-                      + self.side() + ' arm.')
-        rospy.wait_for_service(ik_srv_name)
-        self.ik_srv = rospy.ServiceProxy(ik_srv_name,
-                                         GetPositionIK, persistent=True)
-        rospy.loginfo('IK service has responded for ' + self.side() + ' arm.')
+    def point_cb(self, horizontal, vertical, duration):
 
-        robot = moveit_commander.RobotCommander()
-        # Set up common parts of an IK request
-        self.ik_request = GetPositionIKRequest()
-        request = self.ik_request.ik_request
-        request.timeout = rospy.Duration(4)
-        group_name = self.side() + '_arm'
-        request.group_name = group_name
-        self.ik_joints = self.joint_names
-        self.ik_limits = [robot.get_joint(x).bounds() for x in self.ik_joints]
-        request.ik_link_name = self.ee_name
-        request.pose_stamped.header.frame_id = 'base_link'
-        request.robot_state.joint_state.name = self.ik_joints
-        request.robot_state.joint_state.position = [0] * len(self.joint_names)
+    	## Blend four pointing gestures...
+
+    	if (horizontal >=0 and horizontal <=1 and
+    		vertical >=0 and vertical <=1):
+
+	    	w_tl = vertical*horizontal
+	    	w_tr = vertical*(1-horizontal)
+	    	w_bl = (1-vertical)*horizontal
+	    	w_br = (1-vertical)*(1-horizontal)
+
+	    	pointing_pose_array = (w_tl*array(self.top_left) + w_tr*array(self.top_right)
+	    		+ w_bl*array(self.bottom_left) + w_br*array(self.bottom_right))
+	    	pointing_pose = list(pointing_pose_array)
+
+	    	## Execute
+	    	self.move_to_joints(pointing_pose)
+	    	while (self.is_executing())
+	    		rospy.sleep(0.05)
+	    	rospy.loginfo('\tArms reached pointing pose.')
+
+	    	## Wait
+	    	rospy.sleep(duration)
+
+	    elif not (horizontal == -1 and vertical == -1):
+	    	rospy.logwarn('Invalid input to the PR2 point service.')
+	    	return
+
+    	## Move back to neutral pose
+    	self.move_to_joints(self.neutral)
+    	while (self.is_executing())
+    		rospy.sleep(0.05)
+    	rospy.loginfo('\tArms reached neutral pose.')
+
+   def start_calibration(self):
+    	self.is_calibrating = True
+    	thread = threading.Thread(
+            group=None,
+            target=self.calibrate,
+            name='calibration_thread'
+        )
+        thread.start()
+
+    def calibrate(self):
+
+    	raw_input('Move the arm to a *neutral* pose and press enter.')
+    	self.neutral = self.get_joint_state()
+    	self.save_pose(self.neutral, 'neutral')
+
+    	raw_input('Move the arm to the *top left* pointing pose and press enter.')
+    	self.top_left = self.get_joint_state()
+    	self.save_pose(self.top_left, 'top_left')
+
+    	raw_input('Move the arm to the *top right* pointing pose and press enter.')
+    	self.top_right = self.get_joint_state()
+    	self.save_pose(self.top_right, 'top_right')
+
+    	raw_input('Move the arm to the *bottom right* pointing pose and press enter.')
+    	self.bottom_right = self.get_joint_state()
+    	self.save_pose(self.bottom_right, 'bottom_right')
+
+    	raw_input('Move the arm to the *bottom left* pointing pose and press enter.')
+    	self.bottom_left = self.get_joint_state()
+    	self.save_pose(self.bottom_left, 'bottom_left')
+
+    	rospy.loginfo('Pointing calibration is done.')
+    	self.is_calibrating = False
+
+    def save_pose(self, pose, name):
+        rospack = rospkg.RosPack()
+        pose_file_name = str(rospack.get_path('pr2_point')) + '/data/' + name + '.json' 
+        with open(pose_file_name, 'w') as pose_file:
+            json.dump(pose, pose_file)
+
+    def load_pose(self, name):
+        rospack = rospkg.RosPack()
+        pose_file_name = str(rospack.get_path('pr2_point')) + '/data/' + name + '.json' 
+        with open(pose_file_name) as pose_file:
+            pose = json.load(pose_file)
+        return pose
+
+    def load_pointing_poses(self):
+    	self.neutral = self.load_pose('neutral')
+    	self.top_left = self.load_pose('top_left')
+    	self.top_right = self.load_pose('top_right')
+    	self.bottom_right = self.load_pose('bottom_right')
+    	self.bottom_left = self.load_pose('bottom_left')
 
     def side(self):
         '''Returns the word right or left depending on arm side'''
@@ -169,33 +227,6 @@ class PointService:
                 rospy.logerr("Joint %s not found!", joint_name)
         self.lock.release()
         return positions
-
-    def _solve_ik(self, ee_pose, seed=None):
-        '''Gets the IK solution for end effector pose'''
-
-        self.ik_request.ik_request.pose_stamped.pose = ee_pose
-
-        if seed is None:
-            # If no see is specified for IK search, start search at midpoint
-            seed = []
-            for i in range(0, len(self.ik_joints)):
-                seed.append((self.ik_limits[i][0] +
-                             self.ik_limits[i][1]) / 2.0)
-        self.ik_request.ik_request.robot_state.joint_state.position = seed
-
-        try:
-            #rospy.loginfo('Sending IK request.')
-            response = self.ik_srv(self.ik_request)
-            if(response.error_code.val == response.error_code.SUCCESS):
-                # The solution contains all robot joints, we only need the joints of one arm.
-                response_names = response.solution.joint_state.name
-                response_positions = response.solution.joint_state.position
-                return [response_positions[i] for i, x in enumerate(response_names) if x in self.joint_names]
-            else:
-                return None
-        except rospy.ServiceException:
-            rospy.logerr('Exception while getting the IK solution.')
-            return None
 
     def set_mode(self, mode):
         '''Releases or holds the arm by turning the controller on/off'''
@@ -283,8 +314,12 @@ class PointService:
         elif (gripper_state == GripperState.OPEN):
             self.open_gripper()
 
-    def move_to_joints(self, joints, time_to_joint):
+    def move_to_joints(self, joints):
         '''Moves the arm to the desired joints'''
+
+        ## TODO: based on pose
+        time_to_joint = 2.0
+
         # Setup the goal
         traj_goal = JointTrajectoryGoal()
         traj_goal.trajectory.header.stamp = (rospy.Time.now() +
@@ -349,34 +384,14 @@ class PointService:
             else duration)
 
 
-    #TODO
     def is_executing(self):
         '''Whether or not there is an ongoing action execution on the arm'''
         return (self.traj_action_client.get_state() == GoalStatus.ACTIVE
                 or self.traj_action_client.get_state() == GoalStatus.PENDING)
 
-    #TODO
     def is_successful(self):
         '''Whetehr the execution succeeded'''
         return (self.traj_action_client.get_state() == GoalStatus.SUCCEEDED)
-
-    def get_ik_for_ee(self, ee_pose, seed):
-        ''' Finds the IK solution for given end effector pose'''
-        joints = self._solve_ik(ee_pose, seed)
-        ## If our seed did not work, try once again with the default seed
-        if joints is None:
-            #rospy.logwarn('Could not find IK solution with preferred seed,' +
-            #              'will try default seed.')
-            joints = self._solve_ik(ee_pose)
-
-        if joints is None:
-            pass
-            #rospy.logwarn('IK out of bounds, will use the seed directly.')
-        else:
-            rollover = array((array(joints) - array(seed)) / pi, int)
-            joints -= ((rollover + (sign(rollover) + 1) / 2) / 2) * 2 * pi
-
-        return joints
 
     @staticmethod
     def get_distance_bw_poses(pose0, pose1):
@@ -438,6 +453,7 @@ class PointService:
 
     def update(self, is_executing):
         ''' Periodical update for one arm'''
+
         ee_pose = self.get_ee_state()
         if (ee_pose != None and self.last_ee_pose != None):
             self._record_arm_movement(Arm.get_distance_bw_poses(ee_pose,
@@ -452,3 +468,6 @@ class PointService:
             if (self._is_arm_stable_while_released()):
                 rospy.loginfo('Automatically holding arm.')
                 self.set_mode(ArmMode.HOLD)
+
+
+
