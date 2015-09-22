@@ -19,11 +19,26 @@ from pr2_controllers_msgs.msg import Pr2GripperCommandAction
 from pr2_controllers_msgs.msg import Pr2GripperCommandGoal
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Quaternion, Point, Pose
-from pr2_arm_control.msg import GripperState, ArmMode, Side
 from tf import TransformListener
 
 # The minimum time to allow for moving between poses.
 DURATION_MIN_THRESHOLD = 0.5  # seconds
+
+
+class GripperState:
+        OPEN = 0
+        CLOSED = 1
+
+
+class ArmMode:
+        RELEASE = 0
+        HOLD = 1
+
+
+class Side:
+        LEFT = 0
+        RIGHT = 1
+
 
 class PointService:
 	''' Interfacing with one arm for controlling mode and action execution'''
