@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import rospkg
 import rospy
 import pr2_point
 from pr2_point.point_service import PointService
@@ -10,13 +11,13 @@ if __name__ == '__main__':
 
     arm_index = rospy.get_param('/point_service_node/arm_index')
     is_calibration = rospy.get_param('/point_service_node/is_calibration')
-    pose_file_dir = '{}/data'.format(str(rospack.get_path('pr2_point')))
+    pose_file_dir = '{}/data'.format(str(rospkg.RosPack().get_path('pr2_point')))
     pose_file_dir = rospy.get_param('pose_file_dir', pose_file_dir)
 
 
     if arm_index == 2:
-        ps0 = PointService(arm_index=0, pose_file_dir)
-        ps1 = PointService(arm_index=1, pose_file_dir)
+        ps0 = PointService(arm_index=0, pose_file_dir=pose_file_dir)
+        ps1 = PointService(arm_index=1, pose_file_dir=pose_file_dir)
 
         if is_calibration:
             rospy.loginfo('Calibrating right arm.')
@@ -46,7 +47,7 @@ if __name__ == '__main__':
                   ps1.point_cb)
 
     else:
-        ps = PointService(arm_index=arm_index)
+        ps = PointService(arm_index=arm_index, pose_file_dir=pose_file_dir)
 
         if is_calibration:
             ps.start_calibration()

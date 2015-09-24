@@ -176,14 +176,12 @@ class PointService:
         self.is_calibrating = False
 
     def save_pose(self, pose, name):
-        rospack = rospkg.RosPack()
         pose_file_name = '{}/arm{}_{}.json'.format(
             self.pose_file_dir, self.arm_index, name)
         with open(pose_file_name, 'w') as pose_file:
             json.dump(pose, pose_file)
 
     def load_pose(self, name):
-        rospack = rospkg.RosPack()
         pose_file_name = '{}/arm{}_{}.json'.format(
             self.pose_file_dir, self.arm_index, name)
         with open(pose_file_name) as pose_file:

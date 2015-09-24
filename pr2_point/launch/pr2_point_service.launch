@@ -11,7 +11,7 @@
   <node name="point_service_node" pkg="pr2_point" type="point_service_node.py" output="screen">
     <param name="arm_index" value="$(arg arm_index)" />
     <param name="is_calibration" value="$(arg is_calibration)" />
-    <param name="pose_file_dir" default="$(arg pose_file_dir)" />
+    <param name="pose_file_dir" value="$(arg pose_file_dir)" />
   </node>
 
 </launch>
