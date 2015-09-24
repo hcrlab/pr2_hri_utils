@@ -26,18 +26,18 @@ DURATION_MIN_THRESHOLD = 0.5  # seconds
 
 
 class GripperState:
-        OPEN = 0
-        CLOSED = 1
+    OPEN = 0
+    CLOSED = 1
 
 
 class ArmMode:
-        RELEASE = 0
-        HOLD = 1
+    RELEASE = 0
+    HOLD = 1
 
 
 class Side:
-        LEFT = 0
-        RIGHT = 1
+    LEFT = 0
+    RIGHT = 1
 
 
 class PointService:
@@ -45,8 +45,9 @@ class PointService:
 
     _is_autorelease_on = True
 
-    def __init__(self, arm_index):
+    def __init__(self, arm_index, pose_file_dir):
 
+        self.pose_file_dir = pose_file_dir
         self.arm_index = arm_index
         self.tf_listener = TransformListener()
 
@@ -78,7 +79,7 @@ class PointService:
         rospy.wait_for_service(switch_controller)
         self.switch_service = rospy.ServiceProxy(switch_controller,
                                                  SwitchController)
-        rospy.loginfo('Got response form the switch controller for '
+        rospy.loginfo('Got response from the switch controller for '
                       + self.side() + ' arm.')
 
         # # Create a trajectory action client
@@ -87,7 +88,7 @@ class PointService:
         self.traj_action_client = SimpleActionClient(
                         traj_controller_name, JointTrajectoryAction)
         self.traj_action_client.wait_for_server()
-        rospy.loginfo('Got response form trajectory action server for '
+        rospy.loginfo('Got response from trajectory action server for '
                       + self.side() + ' arm.')
 
         gripper_name = (self._side_prefix() +
@@ -95,7 +96,7 @@ class PointService:
         self.gripper_client = SimpleActionClient(gripper_name,
                                                     Pr2GripperCommandAction)
         self.gripper_client.wait_for_server()
-        rospy.loginfo('Got response form gripper server for '
+        rospy.loginfo('Got response from gripper server for '
                       + self.side() + ' arm.')
         self.close_gripper()
 
@@ -138,47 +139,53 @@ class PointService:
             return False
 
         ## Move back to neutral pose
+        self.move_to_neutral()
+
+        return True
+
+    def move_to_neutral(self):
         self.move_to_joints(self.neutral)
         while (self.is_executing()):
             rospy.sleep(0.05)
         rospy.loginfo('\tArms reached neutral pose.')
 
-        return True
-
     def calibrate(self):
-
-        raw_input('Move the arm to a *neutral* pose and press enter.')
+        text = raw_input('Move the arm to a *neutral* pose and press enter.')
         self.neutral = self.get_joint_state()
         self.save_pose(self.neutral, 'neutral')
 
-        raw_input('Move the arm to the *bottom left* pointing pose and press enter.')
+        text = raw_input('Move the arm to the *bottom left* pointing pose and press enter.')
         self.bottom_left = self.get_joint_state()
         self.save_pose(self.bottom_left, 'bottom_left')
 
-        raw_input('Move the arm to the *top left* pointing pose and press enter.')
+        text = raw_input('Move the arm to the *top left* pointing pose and press enter.')
         self.top_left = self.get_joint_state()
         self.save_pose(self.top_left, 'top_left')
 
-        raw_input('Move the arm to the *top right* pointing pose and press enter.')
+        text = raw_input('Move the arm to the *top right* pointing pose and press enter.')
         self.top_right = self.get_joint_state()
         self.save_pose(self.top_right, 'top_right')
 
-        raw_input('Move the arm to the *bottom right* pointing pose and press enter.')
+        text = raw_input('Move the arm to the *bottom right* pointing pose and press enter.')
         self.bottom_right = self.get_joint_state()
         self.save_pose(self.bottom_right, 'bottom_right')
 
-        rospy.loginfo('Pointing calibration is done.')
+        rospy.loginfo('Pointing calibration is done. Moving back to the neutral pose.')
+        self.move_to_neutral()
+
         self.is_calibrating = False
 
     def save_pose(self, pose, name):
         rospack = rospkg.RosPack()
-        pose_file_name = str(rospack.get_path('pr2_point')) + '/data/arm' + str(self.arm_index) + '_' + name + '.json' 
+        pose_file_name = '{}/arm{}_{}.json'.format(
+            self.pose_file_dir, self.arm_index, name)
         with open(pose_file_name, 'w') as pose_file:
             json.dump(pose, pose_file)
 
     def load_pose(self, name):
         rospack = rospkg.RosPack()
-        pose_file_name = str(rospack.get_path('pr2_point')) + '/data/arm' + str(self.arm_index) + '_' + name + '.json' 
+        pose_file_name = '{}/arm{}_{}.json'.format(
+            self.pose_file_dir, self.arm_index, name)
         with open(pose_file_name) as pose_file:
             pose = json.load(pose_file)
         return pose
